@@ -16,7 +16,7 @@ class PasienService
         $this->fieldLabelsSemua = [
             'ada_diagnosa'         => 'Diagnosa',
             'ada_anamnesis'        => 'Keluhan Utama',
-            'ada_status_fungsional'=> 'Status Fungsional',
+            'ada_status_fungsional' => 'Status Fungsional',
             'ada_skrining_gizi'    => 'Skrining Gizi',
             'ada_tanda_vital'      => 'Tanda Vital (CPPT)',
             'ada_edukasi'          => 'Edukasi Pasien',
@@ -28,7 +28,7 @@ class PasienService
         $this->fieldLabelsRalan = [
             'ada_diagnosa'   => 'Diagnosa',
             'ada_anamnesis'  => 'Keluhan Utama',
-            'ada_tanda_vital'=> 'Tanda Vital (CPPT)',
+            'ada_tanda_vital' => 'Tanda Vital (CPPT)',
             'ada_edukasi'    => 'Edukasi Pasien',
             'ada_cppt'       => 'CPPT',
             'ada_ttd'        => 'Verifikasi CPPT',
@@ -219,69 +219,75 @@ class PasienService
     }
 
     public function getDetailPasien($noKunjungan)
-{
-    $sqlPasien = "
-        SELECT
-            k.NOMOR          AS no_kunjungan,
-            k.NOPEN          AS nopen,
-            k.MASUK          AS waktu_masuk,
-            k.KELUAR         AS waktu_keluar,
-            k.DPJP           AS dpjp_id,
-            p.NORM           AS no_rm,
-            p.TANGGAL        AS tgl_daftar,
-            ps.NAMA          AS nama_pasien,
-            ps.JENIS_KELAMIN AS jenis_kelamin,
-            ps.TANGGAL_LAHIR AS tgl_lahir,
-            r.DESKRIPSI      AS nama_poli,
-            (SELECT pg.NAMA
+    {
+        $sqlPasien = "
+            SELECT
+                k.NOMOR          AS no_kunjungan,
+                k.NOPEN          AS nopen,
+                k.MASUK          AS waktu_masuk,
+                k.KELUAR         AS waktu_keluar,
+                k.DPJP           AS dpjp_id,
+                p.NORM           AS no_rm,
+                p.TANGGAL        AS tgl_daftar,
+                ps.NAMA          AS nama_pasien,
+                ps.JENIS_KELAMIN AS jenis_kelamin,
+                ps.TANGGAL_LAHIR AS tgl_lahir,
+                r.DESKRIPSI      AS nama_poli,
+                (SELECT CONCAT(
+                    IFNULL(pg.GELAR_DEPAN, ''),
+                    IF(pg.GELAR_DEPAN IS NOT NULL AND pg.GELAR_DEPAN != '', ' ', ''),
+                    pg.NAMA,
+                    IF(pg.GELAR_BELAKANG IS NOT NULL AND pg.GELAR_BELAKANG != '', ', ', ''),
+                    IFNULL(pg.GELAR_BELAKANG, '')
+                )
                 FROM master.dokter_ruangan dr
                 LEFT JOIN master.dokter d   ON dr.DOKTER = d.ID
                 LEFT JOIN master.pegawai pg ON d.NIP = pg.NIP
                 WHERE dr.DOKTER = k.DPJP AND dr.RUANGAN = k.RUANGAN
                 LIMIT 1) AS nama_dokter,
-            (SELECT kp.NOMOR
+                (SELECT kp.NOMOR
                 FROM master.dokter_ruangan dr
                 LEFT JOIN master.dokter d   ON dr.DOKTER = d.ID
                 LEFT JOIN master.pegawai pg ON d.NIP = pg.NIP
                 LEFT JOIN pegawai.kontak_pegawai kp ON pg.NIP = kp.NIP AND kp.JENIS = 3
-                WHERE dr.DOKTER = k.DPJP AND dr.RUANGAN = k.RUANGAN
+                WHERE dr.DOKTER = k.DPJP AND dr.RUANGAN = k.RUANGAN AND kp.STATUS = 1
                 LIMIT 1) AS kontak_dokter
-        FROM pendaftaran.kunjungan k
-        LEFT JOIN pendaftaran.pendaftaran p ON k.NOPEN   = p.NOMOR
-        LEFT JOIN master.pasien ps          ON p.NORM    = ps.NORM
-        LEFT JOIN master.ruangan r          ON k.RUANGAN = r.ID
-        WHERE k.NOMOR = ?
-        LIMIT 1
-    ";
+            FROM pendaftaran.kunjungan k
+            LEFT JOIN pendaftaran.pendaftaran p ON k.NOPEN   = p.NOMOR
+            LEFT JOIN master.pasien ps          ON p.NORM    = ps.NORM
+            LEFT JOIN master.ruangan r          ON k.RUANGAN = r.ID
+            WHERE k.NOMOR = ?
+            LIMIT 1
+        ";
 
-    $pasien = DB::connection('simrs')->selectOne($sqlPasien, [$noKunjungan]);
+        $pasien = DB::connection('simrs')->selectOne($sqlPasien, [$noKunjungan]);
 
-    if (!$pasien) {
-        return ['success' => false, 'error' => 'Data tidak ditemukan'];
-    }
+        if (!$pasien) {
+            return ['success' => false, 'error' => 'Data tidak ditemukan'];
+        }
 
-    $nopen = $pasien->nopen;
-    $noKunjungan = $pasien->no_kunjungan;
+        $nopen = $pasien->nopen;
+        $noKunjungan = $pasien->no_kunjungan;
 
-    $keluhan = DB::connection('simrs')->selectOne(
-        "SELECT DESKRIPSI AS keluhan FROM medicalrecord.keluhan_utama WHERE KUNJUNGAN = ? LIMIT 1",
-        [$noKunjungan]
-    );
+        $keluhan = DB::connection('simrs')->selectOne(
+            "SELECT DESKRIPSI AS keluhan FROM medicalrecord.keluhan_utama WHERE KUNJUNGAN = ? LIMIT 1",
+            [$noKunjungan]
+        );
 
-    $cppt = DB::connection('simrs')->selectOne(
-        "SELECT SUBYEKTIF, OBYEKTIF, ASSESMENT, PLANNING, VERIFIKASI FROM medicalrecord.cppt WHERE KUNJUNGAN = ? ORDER BY TANGGAL DESC LIMIT 1",
-        [$noKunjungan]
-    );
+        $cppt = DB::connection('simrs')->selectOne(
+            "SELECT SUBYEKTIF, OBYEKTIF, ASSESMENT, PLANNING, VERIFIKASI FROM medicalrecord.cppt WHERE KUNJUNGAN = ? ORDER BY TANGGAL DESC LIMIT 1",
+            [$noKunjungan]
+        );
 
-    $diagnosa = DB::connection('simrs')->selectOne(
-        "SELECT DIAGNOSA, KODE FROM medicalrecord.diagnosa WHERE NOPEN = ? LIMIT 1",
-        [$nopen]
-    );
+        $diagnosa = DB::connection('simrs')->selectOne(
+            "SELECT DIAGNOSA, KODE FROM medicalrecord.diagnosa WHERE NOPEN = ? LIMIT 1",
+            [$nopen]
+        );
 
-    $normPasien = $pasien->no_rm;
-    $tglKunjungan = substr($pasien->waktu_masuk, 0, 10);
+        $normPasien = $pasien->no_rm;
+        $tglKunjungan = substr($pasien->waktu_masuk, 0, 10);
 
-    $bpjs = DB::connection('simrs')->selectOne("
+        $bpjs = DB::connection('simrs')->selectOne("
         SELECT pj.NOMOR AS no_sep
         FROM pendaftaran.penjamin pj
         JOIN pendaftaran.pendaftaran pp ON pp.NOMOR = pj.NOPEN
@@ -289,15 +295,15 @@ class PasienService
         ORDER BY pp.TANGGAL DESC LIMIT 1
     ", [$normPasien, $tglKunjungan]);
 
-    $noSep = $bpjs->no_sep ?? null;
-    $isBpjs = !empty($noSep);
+        $noSep = $bpjs->no_sep ?? null;
+        $isBpjs = !empty($noSep);
 
-    $berkasList = [];
-    $jmlDokumen = $jmlTte = 0;
-    $tteLengkap = false;
+        $berkasList = [];
+        $jmlDokumen = $jmlTte = 0;
+        $tteLengkap = false;
 
-    if ($isBpjs && $noSep) {
-        $berkasList = DB::connection('simrs')->select("
+        if ($isBpjs && $noSep) {
+            $berkasList = DB::connection('simrs')->select("
             SELECT
                 bd.NAMA_FILE  AS nama_dokumen,
                 'pdf'         AS ekstensi,
@@ -313,12 +319,12 @@ class PasienService
             ORDER BY bd.NAMA_FILE ASC
         ", [$normPasien, $tglKunjungan]);
 
-        $jmlDokumen = count($berkasList);
-        $jmlTte = $jmlDokumen;
-        $tteLengkap = $jmlDokumen > 0;
-    }
+            $jmlDokumen = count($berkasList);
+            $jmlTte = $jmlDokumen;
+            $tteLengkap = $jmlDokumen > 0;
+        }
 
-    $raw = DB::connection('simrs')->selectOne("
+        $raw = DB::connection('simrs')->selectOne("
         SELECT
             (SELECT COUNT(1) FROM medicalrecord.diagnosa WHERE NOPEN = ? LIMIT 1) AS ada_diagnosa,
             (SELECT COUNT(1) FROM medicalrecord.keluhan_utama WHERE KUNJUNGAN = ? LIMIT 1) AS ada_anamnesis,
@@ -333,42 +339,42 @@ class PasienService
             (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = ? LIMIT 1) AS ada_cppt,
             (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = ? AND VERIFIKASI > 0 LIMIT 1) AS ada_ttd
     ", [
-        $nopen,
-        $noKunjungan,
-        $noKunjungan,
-        $noKunjungan,
-        $noKunjungan,
-        $noKunjungan,
-        $noKunjungan,
-        $noKunjungan,
-        $noKunjungan,
-        $noKunjungan,
-        $noKunjungan,
-        $noKunjungan
-    ]);
+            $nopen,
+            $noKunjungan,
+            $noKunjungan,
+            $noKunjungan,
+            $noKunjungan,
+            $noKunjungan,
+            $noKunjungan,
+            $noKunjungan,
+            $noKunjungan,
+            $noKunjungan,
+            $noKunjungan,
+            $noKunjungan
+        ]);
 
-    $fl = $this->getFieldLabels($pasien->nama_poli ?? '');
-    $k = $this->hitungKelengkapan($raw, $fl);
-    $ops = $this->hitungOpsional($raw);
+        $fl = $this->getFieldLabels($pasien->nama_poli ?? '');
+        $k = $this->hitungKelengkapan($raw, $fl);
+        $ops = $this->hitungOpsional($raw);
 
-    return [
-        'success'        => true,
-        'pasien'         => $pasien,
-        'keluhan'        => $keluhan,
-        'cppt'           => $cppt,
-        'diagnosa'       => $diagnosa,
-        'kelengkapan'    => $k,
-        'opsional'       => $ops,
-        'tte'            => null,
-        'berkas'         => $berkasList,
-        'jml_dokumen'    => $jmlDokumen,
-        'jml_tte'        => $jmlTte,
-        'tte_lengkap'    => $tteLengkap,
-        'no_sep'         => $noSep,
-        'is_bpjs'        => $isBpjs,
-        'kontak_dokter'  => $pasien->kontak_dokter ?? null, // tambahan
-    ];
-}
+        return [
+            'success'        => true,
+            'pasien'         => $pasien,
+            'keluhan'        => $keluhan,
+            'cppt'           => $cppt,
+            'diagnosa'       => $diagnosa,
+            'kelengkapan'    => $k,
+            'opsional'       => $ops,
+            'tte'            => null,
+            'berkas'         => $berkasList,
+            'jml_dokumen'    => $jmlDokumen,
+            'jml_tte'        => $jmlTte,
+            'tte_lengkap'    => $tteLengkap,
+            'no_sep'         => $noSep,
+            'is_bpjs'        => $isBpjs,
+            'kontak_dokter'  => $pasien->kontak_dokter ?? null, // tambahan
+        ];
+    }
 
     public function clearCache()
     {

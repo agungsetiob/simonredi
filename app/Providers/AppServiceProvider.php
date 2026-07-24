@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Http;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,5 +23,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+        if (App::environment('local')) {
+            // Paksa semua HttpClient bawaan Laravel & Package untuk mengabaikan SSL peer verification
+            Http::globalOptions([
+                'verify' => false,
+            ]);
+        }
     }
 }

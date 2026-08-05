@@ -129,7 +129,6 @@ export default function Detail({ no_rawat }) {
                 setJmlDokumen(data.jml_dokumen || 0);
                 setJmlTte(data.jml_tte || 0);
                 setTteLengkap(data.tte_lengkap || false);
-                // Setelah data pasien berhasil, load catatan
                 loadNotes();
             } else {
                 setError(data.error || 'Gagal memuat data');
@@ -179,7 +178,6 @@ export default function Detail({ no_rawat }) {
             if (data.success) {
                 setNoteText('');
                 loadNotes();
-                // Tampilkan pesan sesuai wa_status
                 let title = 'Berhasil';
                 let message = data.message;
                 let type = 'success';

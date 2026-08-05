@@ -76,86 +76,95 @@ class PasienService
     public function getPasienHariIni($tanggal, $force = false)
     {
         $cacheKey = 'pasien_' . $tanggal;
-        if (!$force) {
-            return Cache::remember($cacheKey, 300, function () use ($tanggal) {
-                return $this->fetchPasienHariIni($tanggal);
-            });
+
+        if ($force) {
+            Cache::forget($cacheKey);
         }
-        Cache::forget($cacheKey);
-        return $this->fetchPasienHariIni($tanggal);
+
+        return Cache::remember($cacheKey, 300, function () use ($tanggal) {
+            return $this->fetchPasienHariIni($tanggal);
+        });
     }
 
     protected function fetchPasienHariIni($tanggal)
     {
         $sql = "
-            SELECT
-                k.NOMOR          AS no_kunjungan,
-                k.NOPEN          AS nopen,
-                k.MASUK          AS waktu_masuk,
-                k.DPJP           AS dpjp_id,
-                p.NORM           AS no_rm,
-                p.NORM           AS norm_pasien,
-                r.JENIS_KUNJUNGAN AS jenis_kunjungan,
-                CASE
-                    WHEN r.JENIS_KUNJUNGAN=3 THEN 1
-                    WHEN r.JENIS_KUNJUNGAN=2 THEN 2
-                    ELSE 3
-                END AS prioritas_ruangan,
-                ps.NAMA          AS nama_pasien,
-                ps.JENIS_KELAMIN AS jenis_kelamin,
-                r.DESKRIPSI      AS nama_poli,
-                (SELECT pg.NAMA
-                    FROM master.dokter_ruangan dr
-                    LEFT JOIN master.dokter d  ON dr.DOKTER  = d.ID
-                    LEFT JOIN master.pegawai pg ON d.NIP = pg.NIP
-                    WHERE dr.DOKTER = k.DPJP AND dr.RUANGAN = k.RUANGAN
-                    LIMIT 1)                                                      AS nama_dokter,
-                (SELECT pj.NOMOR
-                    FROM pendaftaran.penjamin pj
-                    JOIN pendaftaran.pendaftaran pp ON pp.NOMOR = pj.NOPEN
-                    WHERE pp.NORM = p.NORM AND pj.JENIS = 2
-                    AND DATE(pp.TANGGAL) = DATE(k.MASUK)
-                    ORDER BY pp.TANGGAL DESC LIMIT 1)                             AS no_sep,
-                (SELECT COUNT(1)
-                    FROM berkas_klaim.berkas_detil bd
-                    JOIN pendaftaran.penjamin pj ON bd.NOMOR = pj.NOMOR
-                    JOIN pendaftaran.pendaftaran pp ON pp.NOMOR = pj.NOPEN
-                    WHERE pp.NORM = p.NORM AND pj.JENIS = 2
-                    AND DATE(pp.TANGGAL) = DATE(k.MASUK) LIMIT 1)                AS jml_tte,
-                (SELECT COUNT(DISTINCT bd.NAMA_FILE)
-                    FROM berkas_klaim.berkas_detil bd
-                    JOIN pendaftaran.penjamin pj ON bd.NOMOR = pj.NOMOR
-                    JOIN pendaftaran.pendaftaran pp ON pp.NOMOR = pj.NOPEN
-                    WHERE pp.NORM = p.NORM AND pj.JENIS = 2
-                    AND DATE(pp.TANGGAL) = DATE(k.MASUK))                        AS jml_dokumen,
-                (SELECT COUNT(1) FROM medicalrecord.diagnosa WHERE NOPEN = k.NOPEN LIMIT 1) AS ada_diagnosa,
-                (SELECT COUNT(1) FROM medicalrecord.keluhan_utama WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_anamnesis,
-                (SELECT COUNT(1) FROM medicalrecord.anamnesis WHERE KUNJUNGAN = k.NOMOR AND (RPS IS NOT NULL OR RPT IS NOT NULL) LIMIT 1) AS ada_riwayat,
-                (SELECT COUNT(1) FROM medicalrecord.status_fungsional WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_status_fungsional,
-                (SELECT COUNT(1) FROM medicalrecord.skrining_intervensi_dan_rekomendasi WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_skrining_gizi,
-                (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = k.NOMOR AND OBYEKTIF IS NOT NULL AND OBYEKTIF NOT IN ('','null','[]') LIMIT 1) AS ada_tanda_vital,
-                (SELECT COUNT(1) FROM medicalrecord.penilaian_nyeri WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_nyeri,
-                (SELECT COUNT(1) FROM medicalrecord.faktor_risiko WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_faktor_risiko,
-                (SELECT COUNT(1) FROM medicalrecord.edukasi_pasien_keluarga WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_edukasi,
-                (SELECT COUNT(1) FROM medicalrecord.asuhan_keperawatan WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_asuhan,
-                (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_cppt,
-                (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = k.NOMOR AND VERIFIKASI > 0 LIMIT 1) AS ada_ttd
-            FROM pendaftaran.kunjungan k
-            LEFT JOIN pendaftaran.pendaftaran p ON k.NOPEN   = p.NOMOR
-            LEFT JOIN master.pasien ps          ON p.NORM    = ps.NORM
-            LEFT JOIN master.ruangan r          ON k.RUANGAN = r.ID
-            WHERE DATE(k.MASUK) = ?
-              AND r.JENIS_KUNJUNGAN IN (1,2,3)
-              AND r.DESKRIPSI NOT LIKE '%LAB%'
-              AND r.DESKRIPSI NOT LIKE '%RAD%'
-              AND r.DESKRIPSI NOT LIKE '%APOTEK%'
-              AND r.DESKRIPSI NOT LIKE '%FARMASI%'
-              AND r.DESKRIPSI NOT LIKE '%OPERASI%'
-              AND r.DESKRIPSI NOT LIKE '%KSM%'
-            ORDER BY p.NORM ASC,
-                     CASE WHEN r.JENIS_KUNJUNGAN = 3 THEN 1 WHEN r.JENIS_KUNJUNGAN = 2 THEN 2 ELSE 3 END ASC,
-                     k.MASUK ASC
-        ";
+        SELECT
+            k.NOMOR          AS no_kunjungan,
+            k.NOPEN          AS nopen,
+            k.MASUK          AS waktu_masuk,
+            k.DPJP           AS dpjp_id,
+            p.NORM           AS no_rm,
+            p.NORM           AS norm_pasien,
+            r.JENIS_KUNJUNGAN AS jenis_kunjungan,
+            CASE
+                WHEN r.JENIS_KUNJUNGAN=3 THEN 1
+                WHEN r.JENIS_KUNJUNGAN=2 THEN 2
+                ELSE 3
+            END AS prioritas_ruangan,
+            ps.NAMA          AS nama_pasien,
+            ps.JENIS_KELAMIN AS jenis_kelamin,
+            r.DESKRIPSI      AS nama_poli,
+            
+            (SELECT CONCAT(
+                IFNULL(pg.GELAR_DEPAN, ''),
+                IF(pg.GELAR_DEPAN IS NOT NULL AND pg.GELAR_DEPAN != '', ' ', ''),
+                pg.NAMA,
+                IF(pg.GELAR_BELAKANG IS NOT NULL AND pg.GELAR_BELAKANG != '', ', ', ''),
+                IFNULL(pg.GELAR_BELAKANG, '')
+            )
+            FROM master.dokter_ruangan dr
+            LEFT JOIN master.dokter d   ON dr.DOKTER = d.ID
+            LEFT JOIN master.pegawai pg ON d.NIP = pg.NIP
+            WHERE dr.DOKTER = k.DPJP AND dr.RUANGAN = k.RUANGAN
+            LIMIT 1) AS nama_dokter,
+            
+            (SELECT pj.NOMOR
+                FROM pendaftaran.penjamin pj
+                JOIN pendaftaran.pendaftaran pp ON pp.NOMOR = pj.NOPEN
+                WHERE pp.NORM = p.NORM AND pj.JENIS = 2
+                AND DATE(pp.TANGGAL) = DATE(k.MASUK)
+                ORDER BY pp.TANGGAL DESC LIMIT 1)                             AS no_sep,
+            (SELECT COUNT(1)
+                FROM berkas_klaim.berkas_detil bd
+                JOIN pendaftaran.penjamin pj ON bd.NOMOR = pj.NOMOR
+                JOIN pendaftaran.pendaftaran pp ON pp.NOMOR = pj.NOPEN
+                WHERE pp.NORM = p.NORM AND pj.JENIS = 2
+                AND DATE(pp.TANGGAL) = DATE(k.MASUK) LIMIT 1)                AS jml_tte,
+            (SELECT COUNT(DISTINCT bd.NAMA_FILE)
+                FROM berkas_klaim.berkas_detil bd
+                JOIN pendaftaran.penjamin pj ON bd.NOMOR = pj.NOMOR
+                JOIN pendaftaran.pendaftaran pp ON pp.NOMOR = pj.NOPEN
+                WHERE pp.NORM = p.NORM AND pj.JENIS = 2
+                AND DATE(pp.TANGGAL) = DATE(k.MASUK))                        AS jml_dokumen,
+            (SELECT COUNT(1) FROM medicalrecord.diagnosa WHERE NOPEN = k.NOPEN LIMIT 1) AS ada_diagnosa,
+            (SELECT COUNT(1) FROM medicalrecord.keluhan_utama WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_anamnesis,
+            (SELECT COUNT(1) FROM medicalrecord.anamnesis WHERE KUNJUNGAN = k.NOMOR AND (RPS IS NOT NULL OR RPT IS NOT NULL) LIMIT 1) AS ada_riwayat,
+            (SELECT COUNT(1) FROM medicalrecord.status_fungsional WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_status_fungsional,
+            (SELECT COUNT(1) FROM medicalrecord.skrining_intervensi_dan_rekomendasi WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_skrining_gizi,
+            (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = k.NOMOR AND OBYEKTIF IS NOT NULL AND OBYEKTIF NOT IN ('','null','[]') LIMIT 1) AS ada_tanda_vital,
+            (SELECT COUNT(1) FROM medicalrecord.penilaian_nyeri WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_nyeri,
+            (SELECT COUNT(1) FROM medicalrecord.faktor_risiko WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_faktor_risiko,
+            (SELECT COUNT(1) FROM medicalrecord.edukasi_pasien_keluarga WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_edukasi,
+            (SELECT COUNT(1) FROM medicalrecord.asuhan_keperawatan WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_asuhan,
+            (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_cppt,
+            (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = k.NOMOR AND VERIFIKASI > 0 LIMIT 1) AS ada_ttd
+        FROM pendaftaran.kunjungan k
+        LEFT JOIN pendaftaran.pendaftaran p ON k.NOPEN   = p.NOMOR
+        LEFT JOIN master.pasien ps          ON p.NORM    = ps.NORM
+        LEFT JOIN master.ruangan r          ON k.RUANGAN = r.ID
+        WHERE DATE(k.MASUK) = ?
+          AND r.JENIS_KUNJUNGAN IN (1,2,3)
+          AND r.DESKRIPSI NOT LIKE '%LAB%'
+          AND r.DESKRIPSI NOT LIKE '%RAD%'
+          AND r.DESKRIPSI NOT LIKE '%APOTEK%'
+          AND r.DESKRIPSI NOT LIKE '%FARMASI%'
+          AND r.DESKRIPSI NOT LIKE '%OPERASI%'
+          AND r.DESKRIPSI NOT LIKE '%KSM%'
+        ORDER BY p.NORM ASC,
+                 CASE WHEN r.JENIS_KUNJUNGAN = 3 THEN 1 WHEN r.JENIS_KUNJUNGAN = 2 THEN 2 ELSE 3 END ASC,
+                 k.MASUK ASC
+    ";
 
         $rows = DB::connection('simrs')->select($sql, [$tanggal]);
 
@@ -164,7 +173,6 @@ class PasienService
         $no = 1;
 
         foreach ($rows as $r) {
-
             $jenisMap = [
                 1 => 'Rawat Jalan',
                 2 => 'Rawat Darurat',
@@ -183,26 +191,26 @@ class PasienService
             $jmlDokumen = (int)($r->jml_dokumen ?? 0);
 
             $hasil[] = [
-                'no'           => $no++,
-                'no_rawat'     => $r->no_kunjungan,
-                'nopen'        => $r->nopen,
-                'norm'         => $r->norm_pasien,
-                'no_rm'        => $r->no_rm ?? '-',
-                'nama'         => $r->nama_pasien ?? 'Tidak diketahui',
-                'poli'         => $r->nama_poli ?? '-',
-                'dokter'       => $r->nama_dokter ?? '-',
-                'jam'          => $r->waktu_masuk ? substr($r->waktu_masuk, 11, 5) : '-',
-                'pct'          => $k['pct'],
-                'status'       => $k['status'],
-                'missing'      => $k['missing'],
-                'terisi'       => $k['terisi'],
-                'total'        => $k['total'],
-                'opsional'     => $ops,
-                'tte_lengkap'  => ($jmlDokumen > 0 && $jmlTte > 0),
-                'jml_tte'      => $jmlTte,
-                'jml_dokumen'  => $jmlDokumen,
-                'no_sep'       => $r->no_sep ?? null,
-                'is_bpjs'      => !empty($r->no_sep),
+                'no'                   => $no++,
+                'no_rawat'             => $r->no_kunjungan,
+                'nopen'                => $r->nopen,
+                'norm'                 => $r->norm_pasien,
+                'no_rm'                => $r->no_rm ?? '-',
+                'nama'                 => $r->nama_pasien ?? 'Tidak diketahui',
+                'poli'                 => $r->nama_poli ?? '-',
+                'dokter'               => $r->nama_dokter ?? '-',
+                'jam'                  => $r->waktu_masuk ? substr($r->waktu_masuk, 11, 5) : '-',
+                'pct'                  => $k['pct'],
+                'status'               => $k['status'],
+                'missing'              => $k['missing'],
+                'terisi'               => $k['terisi'],
+                'total'                => $k['total'],
+                'opsional'             => $ops,
+                'tte_lengkap'          => ($jmlDokumen > 0 && $jmlTte > 0),
+                'jml_tte'              => $jmlTte,
+                'jml_dokumen'          => $jmlDokumen,
+                'no_sep'               => $r->no_sep ?? null,
+                'is_bpjs'              => !empty($r->no_sep),
                 'jenis_kunjungan'      => (int)$r->jenis_kunjungan,
                 'jenis_kunjungan_label' => $jenisLabel,
                 'prioritas_ruangan'    => (int)$r->prioritas_ruangan,
@@ -372,7 +380,7 @@ class PasienService
             'tte_lengkap'    => $tteLengkap,
             'no_sep'         => $noSep,
             'is_bpjs'        => $isBpjs,
-            'kontak_dokter'  => $pasien->kontak_dokter ?? null, // tambahan
+            // 'kontak_dokter'  => $pasien->kontak_dokter ?? null,
         ];
     }
 

@@ -17,11 +17,11 @@ class PasienController extends Controller
 
     public function hariIni(Request $request)
     {
-        $tanggal = $request->get('tgl', date('Y-m-d'));
+        $tanggal = $request->input('tgl', date('Y-m-d'));
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal)) {
             $tanggal = date('Y-m-d');
         }
-        $force = (bool) $request->get('refresh', false);
+        $force = (bool) $request->input('refresh', false);
 
         return response()->json(
             $this->pasienService->getPasienHariIni($tanggal, $force)
@@ -30,7 +30,7 @@ class PasienController extends Controller
 
     public function detail(Request $request)
     {
-        $noKunjungan = $request->get('no_rawat');
+        $noKunjungan = $request->input('no_rawat');
         if (!$noKunjungan) {
             return response()->json(['success' => false, 'error' => 'Parameter no_rawat tidak ada'], 400);
         }

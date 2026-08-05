@@ -1,8 +1,9 @@
 import Dropdown from '@/Components/Dropdown';
-import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react'; // Import useEffect untuk inisialisasi
+import { useState, useEffect } from 'react';
+import { Moon, Sun} from 'lucide-react'
+
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
@@ -63,19 +64,13 @@ export default function AuthenticatedLayout({ header, children }) {
                             {/* 🔹 TOMBOL TOGGLE DARK MODE */}
                             <button 
                                 onClick={toggleTheme}
-                                className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none transition-colors mr-3"
+                                className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-50 focus:outline-none transition-colors mr-3"
                                 title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
                             >
                                 {darkMode ? (
-                                    // Icon Matahari (Light Mode)
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                                        <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-1.37 2.13 6.001 6.001 0 0 1-8.5-8.5A9.04 9.04 0 0 0 12 3z" />
-                                    </svg>
+                                    <Sun className="h-5 w-5 fill-current text-orange-500" />
                                 ) : (
-                                    // Icon Bulan (Dark Mode)
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                                        <path d="M12.002 3.002a9.75 9.75 0 0 0-1.254 19.408 6.001 6.001 0 0 1-2.13-1.37A9.001 9.001 0 0 0 12.002 3.002z" />
-                                    </svg>
+                                    <Moon className="h-5 w-5 fill-current text-gray-500" />
                                 )}
                             </button>
 

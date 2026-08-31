@@ -34,6 +34,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/detail/{no_rawat}', function ($no_rawat) {
         return Inertia::render('Detail', ['no_rawat' => $no_rawat]);
     })->name('detail');
+
+    Route::get('/dashboard-simgos', function () {
+        return Inertia::render('DashboardSimgos');
+    })->name('dashboard-simgos');
+
+    Route::get('/detail-simgos/{no_rawat}', function ($no_rawat) {
+        return Inertia::render('DetailSimgos', ['no_rawat' => $no_rawat]);
+    })->name('detail-simgos');
 });
 
 require __DIR__ . '/auth.php';

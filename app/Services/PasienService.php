@@ -150,21 +150,21 @@ class PasienService
             (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = k.NOMOR LIMIT 1) AS ada_cppt,
             (SELECT COUNT(1) FROM medicalrecord.cppt WHERE KUNJUNGAN = k.NOMOR AND VERIFIKASI > 0 LIMIT 1) AS ada_ttd
         FROM pendaftaran.kunjungan k
-        LEFT JOIN pendaftaran.pendaftaran p ON k.NOPEN   = p.NOMOR
-        LEFT JOIN master.pasien ps          ON p.NORM    = ps.NORM
-        LEFT JOIN master.ruangan r          ON k.RUANGAN = r.ID
-        WHERE DATE(k.MASUK) = ?
-          AND r.JENIS_KUNJUNGAN IN (1,2,3)
-          AND r.DESKRIPSI NOT LIKE '%LAB%'
-          AND r.DESKRIPSI NOT LIKE '%RAD%'
-          AND r.DESKRIPSI NOT LIKE '%APOTEK%'
-          AND r.DESKRIPSI NOT LIKE '%FARMASI%'
-          AND r.DESKRIPSI NOT LIKE '%OPERASI%'
-          AND r.DESKRIPSI NOT LIKE '%KSM%'
-        ORDER BY p.NORM ASC,
-                 CASE WHEN r.JENIS_KUNJUNGAN = 3 THEN 1 WHEN r.JENIS_KUNJUNGAN = 2 THEN 2 ELSE 3 END ASC,
-                 k.MASUK ASC
-    ";
+            LEFT JOIN pendaftaran.pendaftaran p ON k.NOPEN   = p.NOMOR
+            LEFT JOIN master.pasien ps          ON p.NORM    = ps.NORM
+            LEFT JOIN master.ruangan r          ON k.RUANGAN = r.ID
+            WHERE DATE(k.MASUK) = ?
+            AND r.JENIS_KUNJUNGAN IN (1,2,3)
+            AND r.DESKRIPSI NOT LIKE '%LAB%'
+            AND r.DESKRIPSI NOT LIKE '%RAD%'
+            AND r.DESKRIPSI NOT LIKE '%APOTEK%'
+            AND r.DESKRIPSI NOT LIKE '%FARMASI%'
+            AND r.DESKRIPSI NOT LIKE '%OPERASI%'
+            AND r.DESKRIPSI NOT LIKE '%KSM%'
+            ORDER BY p.NORM ASC,
+                    CASE WHEN r.JENIS_KUNJUNGAN = 3 THEN 1 WHEN r.JENIS_KUNJUNGAN = 2 THEN 2 ELSE 3 END ASC,
+                    k.MASUK ASC
+        ";
 
         $rows = DB::connection('simrs')->select($sql, [$tanggal]);
 
